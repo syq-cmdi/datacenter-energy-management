@@ -1,0 +1,162 @@
+docker-compose.ymlversion: '3.8'
+
+services:
+  # OpenEMS Edge - Data Center Controller
+  openems-edge:
+    image: openems/edge:latest
+    container_name: dc-energy-edge
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config/edge-config.json:/etc/openems/config.json
+      - ./data/edge:/var/lib/openems
+      - ./logs/edge:/var/log/openems
+    environment:
+      - TZ=UTC
+      - OPENEMS_LOG_LEVEL=INFO
+    ports:
+      - "8080:8080"  # Web UI
+      - "8081:8081"  # WebSocket
+    depends_on:
+      - influxdb
+    labels:
+      - "com.datacenter.service=edge-controller"
+
+  # OpenEMS Backend - Central Management
+  openems-backend:
+    image: openems/backend:latest
+    container_name: dc-energy-backend
+    restart: unless-stopped
+    volumes:
+      - ./config/backend-config.json:/etc/openems/config.json
+      - ./data/backend:/var/lib/openems
+      - ./logs/backend:/var/log/openems
+    environment:
+      - TZ=UTC
+      - OPENEMS_LOG_LEVEL=INFO
+      - DB_HOST=postgres
+      - DB_NAME=openems
+      - DB_USER=openems
+      - DB_PASSWORD=openems123
+    ports:
+      - "8082:8082"  # REST API
+      - "8443:8443"  # HTTPS
+    depends_on:
+      - postgres
+      - influxdb
+    labels:
+      - "com.datacenter.service=backend-server"
+
+  # PostgreSQL - Metadata Storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: dc-energy-postgres
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=openems
+      - POSTGRES_USER=openems
+      - POSTGRES_PASSWORD=openems123
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openems"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # InfluxDB - Time Series Data
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: dc-energy-influxdb
+    restart: unless-stopped
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin123456
+      - DOCKER_INFLUXDB_INIT_ORG=datacenter
+      - DOCKER_INFLUXDB_INIT_BUCKET=energy_data
+      - DOCKER_INFLUXDB_INIT_RETENTION=90d
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Visualization Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dc-energy-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    labels:
+      - "com.datacenter.service=dashboard"
+
+  # Redis - Caching and Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: dc-energy-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # MQTT Broker - Device Communication
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: dc-energy-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"  # MQTT
+      - "9001:9001"  # WebSocket
+    volumes:
+      - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-logs:/mosquitto/log
+
+volumes:
+  postgres-data:
+    driver: local
+  influxdb-data:
+    driver: local
+  influxdb-config:
+    driver: local
+  grafana-data:
+    driver: local
+  redis-data:
+    driver: local
+  mosquitto-data:
+    driver: local
+  mosquitto-logs:
+    driver: local
+
+networks:
+  default:
+    name: dc-energy-network
+    driver: bridge
