@@ -2,13 +2,19 @@
 
 Power-to-Chip v0.1 is seeking technical criticism, not endorsements.
 
+Start with one case in the [Constraint Atlas](CONSTRAINT_ATLAS.md), or propose a
+new synthetic pattern when the current atlas misses the interface you need to
+challenge.
+
 ## Good validation feedback
 
 Open one issue for one gate or failure mode. Include:
 
+- the Constraint Atlas case ID, when applicable;
 - assessment dimension and question;
 - project stage where the issue becomes critical;
 - why the current wording could create false confidence;
+- the propagation path or project decision that changes if the gate is wrong;
 - a proposed correction;
 - a current primary source or a fully sanitized field example, when available.
 

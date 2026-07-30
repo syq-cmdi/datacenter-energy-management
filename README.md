@@ -13,6 +13,18 @@ map of:
 - known constraints; and
 - items outside the declared assessment basis.
 
+## The one-minute outcome
+
+The product is not a readiness score. It is a **First Constraint Finder**:
+identify the first interface worth challenging, show how that constraint can
+propagate toward the rack objective, and leave with the questions and evidence
+needed for the next design review.
+
+Browse the [Constraint Atlas](CONSTRAINT_ATLAS.md) for 12 fully synthetic
+power, cooling, controls, operations and MEP patterns. The atlas is a teaching
+and peer-review asset, not a catalogue of observed incidents or code
+requirements.
+
 ## Five coupled dimensions
 
 1. **Power path** — capacity, continuous ratings, derating and continuity.
@@ -27,8 +39,9 @@ map of:
 ## What the tool produces
 
 - a categorical stage-gate signal;
+- the first constraint or evidence gap to test;
 - one status for each dimension;
-- root-cause constraint propagation paths;
+- additional constraint propagation paths;
 - five questions for the next design review; and
 - a copyable or printable Design Review Passport.
 

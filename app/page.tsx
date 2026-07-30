@@ -587,6 +587,8 @@ export default function Home() {
         : "confirmed";
   const overallMeta = statusMeta[overallStatus];
   const signals = constraintSignals(answers);
+  const firstSignal = signals[0];
+  const additionalSignals = signals.slice(1);
 
   const passport = useMemo(() => {
     const summaryLines = dimensionSummaries
@@ -595,7 +597,9 @@ export default function Home() {
           `${dimension.name}: ${dimension.meta.label} — ${dimension.counts.confirmed} confirmed, ${dimension.counts.validation} validations, ${dimension.counts.evidence} evidence gaps, ${dimension.counts.conflict} constraints`,
       )
       .join("\n");
-    const signalLines = signals.map((signal) => `- ${signal}`).join("\n");
+    const additionalSignalLines = additionalSignals.length
+      ? additionalSignals.map((signal) => `- ${signal}`).join("\n")
+      : "- No additional propagation path was identified by this screening.";
     const questionLines = [...dimensionSummaries]
       .sort((a, b) => b.meta.severity - a.meta.severity)
       .map((dimension) => `- ${dimension.reviewQuestion}`)
@@ -612,14 +616,23 @@ Overall stage-gate signal: ${overallMeta.label}
 DIMENSION SIGNALS
 ${summaryLines}
 
-CONSTRAINTS TO TEST
-${signalLines}
+FIRST CONSTRAINT TO TEST
+- ${firstSignal}
+
+ADDITIONAL PROPAGATION PATHS
+${additionalSignalLines}
 
 NEXT DESIGN-REVIEW QUESTIONS
 ${questionLines}
 
 Method note: Transparent categorical screening based on 15 qualitative inputs. No numerical readiness score is calculated. This is an educational triage tool, not a design calculation, certification, safety approval or substitute for qualified engineering review. Assessment values remain in the browser and are not submitted.`;
-  }, [context, dimensionSummaries, overallMeta.label, signals]);
+  }, [
+    additionalSignals,
+    context,
+    dimensionSummaries,
+    firstSignal,
+    overallMeta.label,
+  ]);
 
   const currentDimension = dimensions[activeStep];
   const currentComplete = currentDimension.questions.every(
@@ -987,12 +1000,20 @@ Method note: Transparent categorical screening based on 15 qualitative inputs. N
 
           <div className="result-columns">
             <article className="signal-card">
-              <p className="card-kicker">CONSTRAINTS TO TEST</p>
+              <p className="card-kicker">FIRST CONSTRAINT TO TEST</p>
               <ol>
-                {signals.map((signal) => (
-                  <li key={signal}>{signal}</li>
-                ))}
+                <li>{firstSignal}</li>
               </ol>
+              {additionalSignals.length > 0 && (
+                <>
+                  <p className="card-kicker">ADDITIONAL PROPAGATION PATHS</p>
+                  <ol>
+                    {additionalSignals.map((signal) => (
+                      <li key={signal}>{signal}</li>
+                    ))}
+                  </ol>
+                </>
+              )}
             </article>
             <article className="question-card">
               <p className="card-kicker">FIVE QUESTIONS FOR DESIGN REVIEW</p>
